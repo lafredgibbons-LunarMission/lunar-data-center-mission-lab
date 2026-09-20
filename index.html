@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore the power, energy storage, and heat-rejection tradeoffs of operating a small data center on the Moon.">
+  <meta name="theme-color" content="#07111f">
+  <title>Lunar Data Center Mission Lab</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111f'/%3E%3Ccircle cx='31' cy='31' r='19' fill='%23d9e4e7'/%3E%3Ccircle cx='40' cy='22' r='5' fill='%2396a7ad'/%3E%3Ccircle cx='23' cy='37' r='6' fill='%2396a7ad'/%3E%3Cpath d='M8 47c14-7 30-7 48 0' fill='none' stroke='%236ce5d3' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050a11;
+      --panel: #0b1522;
+      --panel-2: #101d2b;
+      --line: #22364a;
+      --grid: #1a2a3a;
+      --text: #edf5f6;
+      --muted: #9aabb7;
+      --teal: #65e5d1;
+      --blue: #77a9ff;
+      --amber: #f1bd68;
+      --red: #ff857a;
+      --good: #85e89d;
+      --shadow: 0 22px 70px rgba(0, 0, 0, .34);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 80% -10%, rgba(75, 130, 168, .18), transparent 35rem),
+        linear-gradient(180deg, #07111f 0, var(--bg) 38rem);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    button, input, select { font: inherit; }
+
+    .shell { width: min(1400px, calc(100% - 32px)); margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 28px 0 20px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+
+    .mark {
+      width: 40px;
+      height: 40px;
+      border: 1px solid #35516a;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #15283b, #08111d);
+      box-shadow: inset 0 1px rgba(255, 255, 255, .06);
+    }
+
+    .mark svg { width: 25px; height: 25px; }
+    .brand-name { font-weight: 750; letter-spacing: -.02em; }
+    .brand-sub { color: var(--muted); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border: 1px solid #29465b;
+      border-radius: 999px;
+      color: #c8d7dd;
+      background: rgba(8, 19, 31, .65);
+      font-size: .78rem;
+    }
+
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 13px var(--teal); }
+
+    .hero { padding: 46px 0 28px; max-width: 830px; }
+    .eyebrow { color: var(--teal); font-size: .78rem; font-weight: 760; letter-spacing: .13em; text-transform: uppercase; }
+
+    h1 {
+      max-width: 780px;
+      margin: 9px 0 14px;
+      font-size: clamp(2.2rem, 5.2vw, 4.7rem);
+      line-height: .98;
+      letter-spacing: -.055em;
+    }
+
+    .hero p { margin: 0; max-width: 720px; color: #b2c1ca; font-size: clamp(1rem, 1.8vw, 1.17rem); }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(250px, 315px) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      padding: 22px 0 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(14, 28, 43, .96), rgba(8, 17, 28, .96));
+      box-shadow: var(--shadow);
+    }
+
+    .controls { padding: 20px; position: sticky; top: 16px; }
+    .panel-title { margin: 0; font-size: 1rem; letter-spacing: -.01em; }
+    .panel-kicker { margin: 4px 0 18px; color: var(--muted); font-size: .8rem; }
+    .field { margin-top: 17px; }
+    .field:first-of-type { margin-top: 0; }
+
+    .field-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 7px; }
+    label { font-size: .79rem; color: #c4d0d6; font-weight: 650; }
+    output { color: var(--teal); font-size: .76rem; font-variant-numeric: tabular-nums; }
+
+    select {
+      width: 100%;
+      min-height: 42px;
+      color: var(--text);
+      border: 1px solid #31475b;
+      border-radius: 9px;
+      background: #0a1421;
+      padding: 0 11px;
+      cursor: pointer;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+
+    select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+
+    .reset {
+      width: 100%;
+      min-height: 40px;
+      margin-top: 21px;
+      border: 1px solid #345069;
+      border-radius: 9px;
+      background: #112339;
+      color: #dfeaed;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .reset:hover { background: #18304a; }
+
+    .results { min-width: 0; display: grid; gap: 16px; }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .metric { padding: 17px 18px 16px; }
+    .metric-label { color: var(--muted); font-size: .76rem; text-transform: uppercase; letter-spacing: .07em; }
+    .metric-value { margin-top: 5px; font-size: clamp(1.65rem, 3.3vw, 2.45rem); line-height: 1; font-weight: 760; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+    .metric-note { margin-top: 7px; color: #7f929e; font-size: .74rem; }
+
+    .chart-panel { padding: 20px 20px 14px; min-width: 0; }
+    .chart-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+    .chart-title { margin: 0; font-size: 1rem; }
+    .chart-sub { margin: 4px 0 0; color: var(--muted); font-size: .78rem; }
+
+    .legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 14px; color: #b6c3ca; font-size: .73rem; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .swatch { width: 15px; height: 3px; border-radius: 3px; }
+    .swatch.demand { background: var(--blue); }
+    .swatch.generation { background: var(--teal); }
+    .swatch.battery { background: var(--amber); }
+
+    .chart-wrap { position: relative; width: 100%; margin-top: 14px; }
+    #chart { width: 100%; height: auto; min-height: 400px; display: block; overflow: visible; }
+    .axis-text { fill: #8497a4; font-size: 11px; }
+    .axis-label { fill: #aab9c2; font-size: 11px; font-weight: 600; }
+    .grid-line { stroke: var(--grid); stroke-width: 1; }
+    .domain-line { stroke: #355069; stroke-width: 1; }
+
+    .tooltip {
+      position: absolute;
+      z-index: 4;
+      min-width: 150px;
+      padding: 9px 10px;
+      border: 1px solid #3b5369;
+      border-radius: 8px;
+      background: rgba(5, 12, 20, .95);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+      color: #dce7ea;
+      font-size: .72rem;
+      pointer-events: none;
+      transform: translate(-50%, calc(-100% - 12px));
+    }
+
+    .tooltip[hidden] { display: none; }
+    .tip-row { display: flex; justify-content: space-between; gap: 16px; margin-top: 3px; }
+    .tip-row b { font-variant-numeric: tabular-nums; }
+
+    .diagnosis {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 11px;
+      align-items: start;
+      padding: 16px 18px;
+      border-color: #30495e;
+    }
+
+    .diagnosis-icon {
+      width: 29px;
+      height: 29px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--amber);
+      background: rgba(241, 189, 104, .1);
+      font-weight: 800;
+    }
+
+    .diagnosis strong { display: block; font-size: .88rem; }
+    .diagnosis p { margin: 3px 0 0; color: #a7b7c0; font-size: .8rem; }
+
+    .assumptions {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 16px;
+      padding: 42px 0 54px;
+    }
+
+    .assumptions h2 { margin: 0 0 8px; font-size: clamp(1.4rem, 2.6vw, 2rem); letter-spacing: -.035em; }
+    .assumptions p { margin: 0; color: var(--muted); max-width: 610px; }
+
+    .assumption-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .assumption { padding: 13px 14px; border: 1px solid var(--line); border-radius: 11px; background: rgba(11, 23, 36, .65); }
+    .assumption b { display: block; color: #dbe7e9; font-size: .8rem; }
+    .assumption span { color: #879aa5; font-size: .72rem; }
+
+    footer { display: flex; justify-content: space-between; gap: 22px; padding: 21px 0 30px; border-top: 1px solid #182a3b; color: #728590; font-size: .72rem; }
+
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: 1fr; }
+      .controls { position: static; }
+      .controls-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 20px; }
+      .assumptions { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 20px, 1400px); }
+      header { align-items: flex-start; }
+      .brand-sub, .status span:last-child { display: none; }
+      .hero { padding-top: 30px; }
+      .metrics { grid-template-columns: 1fr; }
+      .controls-grid, .assumption-list { grid-template-columns: 1fr; }
+      .chart-top { display: block; }
+      .legend { justify-content: flex-start; margin-top: 12px; }
+      .chart-panel { padding-inline: 13px; }
+      #chart { min-height: 350px; }
+      footer { display: block; }
+      footer span { display: block; margin-top: 4px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><circle cx="15" cy="15" r="9" fill="#d7e2e5"/><circle cx="19" cy="11" r="2.5" fill="#82949b"/><circle cx="11" cy="18" r="3" fill="#82949b"/><path d="M3 24.5c8-4 17-4 26 0" stroke="#65e5d1" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </div>
+        <div>
+          <div class="brand-name">Lunar Data Center Mission Lab</div>
+          <div class="brand-sub">Systems trade-space simulator</div>
+        </div>
+      </div>
+      <div class="status"><i class="status-dot" aria-hidden="true"></i><span>Model online</span><span>· v0.1</span></div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="eyebrow">Power. Cooling. Continuity.</div>
+        <h1 id="page-title">What would it take to compute on the Moon?</h1>
+        <p>Adjust a conceptual lunar data center and see how location, generation, storage, and heat rejection shape one full-load mission month.</p>
+      </section>
+
+      <section class="workspace" aria-label="Lunar data center simulator">
+        <aside class="panel controls">
+          <h2 class="panel-title">Mission configuration</h2>
+          <p class="panel-kicker">Change one variable—or stress the whole system.</p>
+          <div class="controls-grid">
+            <div class="field">
+              <div class="field-head"><label for="site">Operating site</label></div>
+              <select id="site">
+                <option value="equator">Equator · long day/night</option>
+                <option value="polar" selected>Polar ridge · modeled 85% light</option>
+                <option value="shadow">Permanent shadow · no solar</option>
+              </select>
+            </div>
+            <div class="field">
+              <div class="field-head"><label for="load">Requested IT load</label><output id="loadValue" for="load">30 kW</output></div>
+              <input id="load" type="range" min="5" max="100" step="5" value="30">
+            </div>
+            <div class="field">
+              <div class="field-head"><label for="solar">Solar array peak</label><output id="solarValue" for="solar">80 kW</output></div>
+              <input id="solar" type="range" min="0" max="200" step="5" value="80">
+            </div>
+            <div class="field">
+              <div class="field-head"><label for="battery">Battery capacity</label><output id="batteryValue" for="battery">3,000 kWh</output></div>
+              <input id="battery" type="range" min="0" max="10000" step="250" value="3000">
+            </div>
+            <div class="field">
+              <div class="field-head"><label for="continuous">Continuous power</label><output id="continuousValue" for="continuous">15 kW</output></div>
+              <input id="continuous" type="range" min="0" max="100" step="5" value="15">
+            </div>
+            <div class="field">
+              <div class="field-head"><label for="radiator">Heat rejection</label><output id="radiatorValue" for="radiator">45 kW</output></div>
+              <input id="radiator" type="range" min="5" max="150" step="5" value="45">
+            </div>
+          </div>
+          <button class="reset" id="reset" type="button">Reset baseline</button>
+        </aside>
+
+        <div class="results">
+          <div class="metrics" aria-live="polite">
+            <article class="panel metric"><div class="metric-label">Full-load uptime</div><div class="metric-value" id="uptime">—</div><div class="metric-note">Hours at requested compute load</div></article>
+            <article class="panel metric"><div class="metric-label">Compute delivered</div><div class="metric-value" id="compute">—</div><div class="metric-note">Across 29.5 Earth days</div></article>
+            <article class="panel metric"><div class="metric-label">Minimum battery</div><div class="metric-value" id="minSoc">—</div><div class="metric-note">Lowest stored-energy state</div></article>
+          </div>
+
+          <section class="panel chart-panel" aria-labelledby="chart-title">
+            <div class="chart-top">
+              <div><h2 class="chart-title" id="chart-title">Mission energy profile</h2><p class="chart-sub">One modeled lunar month · hourly simulation</p></div>
+              <div class="legend" aria-label="Chart legend"><span><i class="swatch demand"></i>Target power</span><span><i class="swatch generation"></i>Direct generation</span><span><i class="swatch battery"></i>Battery state</span></div>
+            </div>
+            <div class="chart-wrap" id="chartWrap">
+              <svg id="chart" role="img" aria-label="Target electrical power, direct generation, and battery state during a modeled lunar month"></svg>
+              <div class="tooltip" id="tooltip" hidden></div>
+            </div>
+          </section>
+
+          <section class="panel diagnosis" aria-live="polite">
+            <div class="diagnosis-icon" id="diagnosisIcon" aria-hidden="true">!</div>
+            <div><strong id="diagnosisTitle">Evaluating system</strong><p id="diagnosisText">The model is calculating the current mission configuration.</p></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="assumptions" aria-labelledby="assumptions-title">
+        <div>
+          <div class="eyebrow">Know the model</div>
+          <h2 id="assumptions-title">A teaching tool, not a flight design.</h2>
+          <p>The simulator exposes major relationships without claiming mission-grade fidelity. Real systems would also model hardware degradation, dust, radiation, communications, maintenance, launch mass, redundancy, and site-specific illumination.</p>
+        </div>
+        <div class="assumption-list">
+          <div class="assumption"><b>Time horizon</b><span>708 hourly steps · 29.5 Earth days</span></div>
+          <div class="assumption"><b>Battery</b><span>92% efficiency during charge and discharge</span></div>
+          <div class="assumption"><b>Facility overhead</b><span>3 kW base + 12% of requested IT load</span></div>
+          <div class="assumption"><b>Solar profiles</b><span>Simplified by site for comparison</span></div>
+        </div>
+      </section>
+    </main>
+
+    <footer><span>Educational systems model · not for mission planning</span><span>Built to make lunar infrastructure tradeoffs visible.</span></footer>
+  </div>
+
+  <script>
+    (() => {
+      const HOURS = 708;
+      const defaults = { site: 'polar', load: 30, solar: 80, battery: 3000, continuous: 15, radiator: 45 };
+      const fields = Object.fromEntries(['site', 'load', 'solar', 'battery', 'continuous', 'radiator'].map(id => [id, document.getElementById(id)]));
+      const out = Object.fromEntries(['loadValue', 'solarValue', 'batteryValue', 'continuousValue', 'radiatorValue', 'uptime', 'compute', 'minSoc', 'diagnosisIcon', 'diagnosisTitle', 'diagnosisText'].map(id => [id, document.getElementById(id)]));
+      const svg = document.getElementById('chart');
+      const wrap = document.getElementById('chartWrap');
+      const tooltip = document.getElementById('tooltip');
+      const NS = 'http://www.w3.org/2000/svg';
+      let currentData = [];
+      let layout = null;
+
+      const el = (name, attrs = {}, text = '') => {
+        const node = document.createElementNS(NS, name);
+        Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+        if (text) node.textContent = text;
+        return node;
+      };
+
+      function sunlight(site, hour) {
+        if (site === 'shadow') return 0;
+        if (site === 'equator') return Math.max(0, Math.sin(2 * Math.PI * hour / HOURS));
+        return (hour % 168) >= 142 ? 0 : 0.85;
+      }
+
+      function simulate() {
+        const site = fields.site.value;
+        const requestedIT = +fields.load.value;
+        const solarPeak = +fields.solar.value;
+        const capacity = +fields.battery.value;
+        const continuous = +fields.continuous.value;
+        const radiator = +fields.radiator.value;
+        const auxiliary = 3 + .12 * requestedIT;
+        const thermallyAvailableIT = Math.max(0, Math.min(requestedIT, radiator - auxiliary));
+        const targetPower = auxiliary + requestedIT;
+        let soc = capacity;
+        let fullHours = 0;
+        let computeKWh = 0;
+        let minSoc = capacity;
+        let shortfallKWh = 0;
+        const data = [];
+
+        for (let hour = 0; hour < HOURS; hour++) {
+          const solar = solarPeak * sunlight(site, hour);
+          const generation = solar + continuous;
+          const operatingDemand = auxiliary + thermallyAvailableIT;
+          let powerFraction = 1;
+
+          if (generation >= operatingDemand) {
+            soc = Math.min(capacity, soc + (generation - operatingDemand) * .92);
+          } else {
+            const deficit = operatingDemand - generation;
+            const batteryNeeded = deficit / .92;
+            const batteryUsed = Math.min(soc, batteryNeeded);
+            soc -= batteryUsed;
+            const delivered = generation + batteryUsed * .92;
+            powerFraction = operatingDemand ? Math.min(1, delivered / operatingDemand) : 1;
+            shortfallKWh += Math.max(0, operatingDemand - delivered);
+          }
+
+          const thermalFraction = requestedIT ? thermallyAvailableIT / requestedIT : 1;
+          const deliveredFraction = Math.min(powerFraction, thermalFraction);
+          if (deliveredFraction >= .999) fullHours++;
+          computeKWh += requestedIT * deliveredFraction;
+          minSoc = Math.min(minSoc, soc);
+          data.push({ day: hour / 24, demand: targetPower, generation, socPct: capacity ? 100 * soc / capacity : 0 });
+        }
+
+        out.loadValue.value = `${requestedIT} kW`;
+        out.solarValue.value = `${solarPeak} kW`;
+        out.batteryValue.value = `${capacity.toLocaleString()} kWh`;
+        out.continuousValue.value = `${continuous} kW`;
+        out.radiatorValue.value = `${radiator} kW`;
+        out.uptime.textContent = `${(100 * fullHours / HOURS).toFixed(1)}%`;
+        out.compute.textContent = `${(computeKWh / 1000).toFixed(1)} MWh`;
+        out.minSoc.textContent = capacity ? `${(100 * minSoc / capacity).toFixed(0)}%` : 'No battery';
+
+        const thermalLimited = thermallyAvailableIT < requestedIT;
+        const powerLimited = shortfallKWh > .1;
+        if (thermalLimited && powerLimited) setDiagnosis('dual', 'Power and thermal limits', 'Heat rejection throttles compute, while stored energy is also exhausted during low-generation periods.');
+        else if (thermalLimited) setDiagnosis('thermal', 'Thermal bottleneck', 'Heat rejection is below the requested computing load. Adding electrical power alone will not restore full output.');
+        else if (powerLimited) setDiagnosis('power', 'Energy continuity gap', 'Generation and stored energy cannot cover the longest low-sunlight period.');
+        else setDiagnosis('good', 'Full-load month sustained', 'This configuration maintains the requested computing load for the complete modeled lunar month.');
+
+        currentData = data;
+        draw(data);
+      }
+
+      function setDiagnosis(kind, title, text) {
+        const good = kind === 'good';
+        out.diagnosisIcon.textContent = good ? '✓' : '!';
+        out.diagnosisIcon.style.color = good ? 'var(--good)' : 'var(--amber)';
+        out.diagnosisIcon.style.background = good ? 'rgba(133,232,157,.1)' : 'rgba(241,189,104,.1)';
+        out.diagnosisTitle.textContent = title;
+        out.diagnosisText.textContent = text;
+      }
+
+      function linePath(data, x, y, key) {
+        return data.map((d, i) => `${i ? 'L' : 'M'}${x(d.day).toFixed(2)},${y(d[key]).toFixed(2)}`).join(' ');
+      }
+
+      function draw(data) {
+        const width = Math.max(310, Math.round(wrap.clientWidth));
+        const mobile = width < 520;
+        const margin = { top: 16, right: 14, bottom: 36, left: mobile ? 45 : 56 };
+        const powerH = mobile ? 180 : 220;
+        const batteryH = mobile ? 75 : 92;
+        const gap = 43;
+        const height = margin.top + powerH + gap + batteryH + margin.bottom;
+        const plotW = width - margin.left - margin.right;
+        const maxPower = Math.max(10, ...data.map(d => Math.max(d.demand, d.generation))) * 1.08;
+        const x = day => margin.left + (day / 29.5) * plotW;
+        const yPower = value => margin.top + powerH - (value / maxPower) * powerH;
+        const batteryTop = margin.top + powerH + gap;
+        const yBattery = value => batteryTop + batteryH - (value / 100) * batteryH;
+        const xTicks = mobile ? [0, 10, 20, 29.5] : [0, 5, 10, 15, 20, 25, 29.5];
+        const powerTicks = 4;
+
+        svg.replaceChildren();
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.style.height = `${height}px`;
+
+        for (let i = 0; i <= powerTicks; i++) {
+          const value = (maxPower / powerTicks) * i;
+          const y = yPower(value);
+          svg.append(el('line', { x1: margin.left, y1: y, x2: width - margin.right, y2: y, class: 'grid-line' }));
+          svg.append(el('text', { x: margin.left - 8, y: y + 4, 'text-anchor': 'end', class: 'axis-text' }, Math.round(value)));
+        }
+
+        [0, 50, 100].forEach(value => {
+          const y = yBattery(value);
+          svg.append(el('line', { x1: margin.left, y1: y, x2: width - margin.right, y2: y, class: 'grid-line' }));
+          svg.append(el('text', { x: margin.left - 8, y: y + 4, 'text-anchor': 'end', class: 'axis-text' }, `${value}%`));
+        });
+
+        xTicks.forEach(day => {
+          const xPos = x(day);
+          svg.append(el('line', { x1: xPos, y1: batteryTop + batteryH, x2: xPos, y2: batteryTop + batteryH + 5, class: 'domain-line' }));
+          svg.append(el('text', { x: xPos, y: height - 10, 'text-anchor': 'middle', class: 'axis-text' }, day === 29.5 ? '29.5' : day));
+        });
+
+        svg.append(el('line', { x1: margin.left, y1: margin.top + powerH, x2: width - margin.right, y2: margin.top + powerH, class: 'domain-line' }));
+        svg.append(el('line', { x1: margin.left, y1: batteryTop + batteryH, x2: width - margin.right, y2: batteryTop + batteryH, class: 'domain-line' }));
+        svg.append(el('text', { x: margin.left, y: margin.top - 5, class: 'axis-label' }, 'Power (kW)'));
+        svg.append(el('text', { x: margin.left, y: batteryTop - 10, class: 'axis-label' }, 'Battery state'));
+        svg.append(el('text', { x: margin.left + plotW / 2, y: height - 10, 'text-anchor': 'middle', class: 'axis-label' }, ''));
+
+        svg.append(el('path', { d: linePath(data, x, yPower, 'demand'), fill: 'none', stroke: 'var(--blue)', 'stroke-width': 2.3, 'vector-effect': 'non-scaling-stroke' }));
+        svg.append(el('path', { d: linePath(data, x, yPower, 'generation'), fill: 'none', stroke: 'var(--teal)', 'stroke-width': 2.3, 'vector-effect': 'non-scaling-stroke' }));
+        svg.append(el('path', { d: linePath(data, x, yBattery, 'socPct'), fill: 'none', stroke: 'var(--amber)', 'stroke-width': 2.3, 'vector-effect': 'non-scaling-stroke' }));
+
+        const guide = el('line', { y1: margin.top, y2: batteryTop + batteryH, stroke: '#93a9b7', 'stroke-width': 1, 'stroke-dasharray': '3 4', opacity: 0 });
+        const hit = el('rect', { x: margin.left, y: margin.top, width: plotW, height: batteryTop + batteryH - margin.top, fill: 'transparent', tabindex: 0, 'aria-label': 'Move across the chart to inspect values' });
+        svg.append(guide, hit);
+        layout = { width, margin, plotW, x, guide };
+
+        const inspect = event => {
+          const rect = svg.getBoundingClientRect();
+          const screenX = event.touches ? event.touches[0].clientX : event.clientX;
+          const localX = Math.max(margin.left, Math.min(width - margin.right, (screenX - rect.left) * width / rect.width));
+          const day = (localX - margin.left) / plotW * 29.5;
+          const index = Math.max(0, Math.min(data.length - 1, Math.round(day * 24)));
+          const d = data[index];
+          guide.setAttribute('x1', x(d.day));
+          guide.setAttribute('x2', x(d.day));
+          guide.setAttribute('opacity', 1);
+          tooltip.innerHTML = `<strong>Day ${d.day.toFixed(1)}</strong><div class="tip-row"><span>Target</span><b>${d.demand.toFixed(0)} kW</b></div><div class="tip-row"><span>Generation</span><b>${d.generation.toFixed(0)} kW</b></div><div class="tip-row"><span>Battery</span><b>${d.socPct.toFixed(0)}%</b></div>`;
+          tooltip.hidden = false;
+          const px = x(d.day) / width * rect.width;
+          tooltip.style.left = `${Math.max(82, Math.min(rect.width - 82, px))}px`;
+          tooltip.style.top = `${batteryTop / height * rect.height}px`;
+        };
+
+        hit.addEventListener('pointermove', inspect);
+        hit.addEventListener('pointerenter', inspect);
+        hit.addEventListener('pointerleave', () => { guide.setAttribute('opacity', 0); tooltip.hidden = true; });
+        hit.addEventListener('focus', () => inspect({ clientX: svg.getBoundingClientRect().left + svg.getBoundingClientRect().width / 2 }));
+        hit.addEventListener('blur', () => { guide.setAttribute('opacity', 0); tooltip.hidden = true; });
+      }
+
+      Object.values(fields).forEach(field => field.addEventListener('input', simulate));
+      document.getElementById('reset').addEventListener('click', () => {
+        Object.entries(defaults).forEach(([key, value]) => { fields[key].value = value; });
+        simulate();
+      });
+
+      new ResizeObserver(() => { if (currentData.length) draw(currentData); }).observe(wrap);
+      simulate();
+    })();
+  </script>
+</body>
+</html>
